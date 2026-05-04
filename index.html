@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Libercoop</title>
+    <link rel="stylesheet" href="https://www.gstatic.com/dialogflow-console/fast/df-messenger/prod/v1/themes/df-messenger-default.css">
+    <style>
+      body {
+          margin: 0;
+          padding: 0;
+          font-family: sans-serif;
+          background-color: #f0f0f0; /* Color de fondo de la web */
+      }
+      df-messenger {
+        z-index: 999;
+        position: fixed;
+        --df-messenger-font-color: #000;
+        --df-messenger-font-family: Google Sans;
+        --df-messenger-chat-background: #f3f6fc;
+        --df-messenger-message-user-background: #d3e3fd;
+        --df-messenger-message-bot-background: #fff;
+        bottom: 16px;
+        right: 16px;
+      }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; margin-top: 50px;">Asistente Virtual Libercoop</h1>
+
+    <script src="https://www.gstatic.com/dialogflow-console/fast/df-messenger/prod/v1/df-messenger.js"></script>
+    <df-messenger
+      project-id="chatbot-ia-477214"
+      agent-id="a63d5aa5-964a-48da-be6d-3fe04ea8f7e3"
+      language-code="es"
+      max-query-length="-1"
+      allow-feedback="all">
+      <df-messenger-chat-bubble
+        chat-title="Asistente Libercoop">
+      </df-messenger-chat-bubble>
+    </df-messenger>
+
+</body>
+</html>
