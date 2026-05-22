@@ -41,22 +41,55 @@
       </df-messenger-chat-bubble>
     </df-messenger>
 
-    <!-- SCRIPT CORREGIDO PARA DIALOGFLOW CX (BUG 02) -->
+    <!-- SCRIPT FIX BUG 02: DESTRUCCION DE df-card EN SHADOW DOM -->
     <script>
+      // ── CAPA 1: Datos ─────────────────────────────────────────────────────────
+      // Limpia los marcadores de cita [1], [2] del texto que devuelve Dialogflow CX.
       window.addEventListener('df-response-received', (event) => {
-        if (event.detail && event.detail.messages) {
-          
-          // 1. Filtrar: Dejamos SOLO los mensajes que traigan texto puro (Formato CX)
-          // Esto elimina automáticamente cualquier "tarjeta" o hipervínculo de Vertex AI
-          event.detail.messages = event.detail.messages.filter(msg => msg.text !== undefined);
+        const messages = event.detail && event.detail.messages;
+        if (!messages) return;
 
-          // 2. Limpieza quirúrgica: Borrar los numeritos como [1], [2] del texto
-          event.detail.messages.forEach(msg => {
-            if (msg.text && Array.isArray(msg.text.text)) {
-              msg.text.text = msg.text.text.map(texto => texto.replace(/\[\d+\]/g, '').trim());
-            }
-          });
+        messages.forEach(msg => {
+          // Estructura CX: msg.text.text es un array de strings
+          if (msg.text && Array.isArray(msg.text.text)) {
+            msg.text.text = msg.text.text.map(t => t.replace(/\[\d+\]/g, '').trim());
+          }
+        });
+      });
+
+      // ── CAPA 2: Visual ────────────────────────────────────────────────────────
+      // df-messenger usa Shadow DOM anidado. Inyectamos CSS en cada shadow root
+      // para destruir el componente df-card que Google usa para los hipervínculos
+      // de Vertex AI, sin afectar el resto de la UI del chat.
+      const _injected = new WeakSet();
+
+      function _injectHideCard(shadowRoot) {
+        if (!shadowRoot || _injected.has(shadowRoot)) return;
+        _injected.add(shadowRoot);
+
+        const style = document.createElement('style');
+        style.textContent = 'df-card { display: none !important; }';
+        shadowRoot.appendChild(style);
+
+        // Vigilar nuevos nodos que aparezcan más tarde (paneles de carga diferida)
+        new MutationObserver(muts => {
+          muts.forEach(m => m.addedNodes.forEach(n => _walkShadow(n)));
+        }).observe(shadowRoot, { childList: true, subtree: true });
+      }
+
+      function _walkShadow(node) {
+        if (!node || node.nodeType !== 1) return;
+        if (node.shadowRoot) {
+          _injectHideCard(node.shadowRoot);
+          node.shadowRoot.querySelectorAll('*').forEach(_walkShadow);
         }
+      }
+
+      customElements.whenDefined('df-messenger').then(() => {
+        _walkShadow(document.querySelector('df-messenger'));
+        window.addEventListener('df-messenger-loaded', () => {
+          _walkShadow(document.querySelector('df-messenger'));
+        });
       });
     </script>
 
