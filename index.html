@@ -41,63 +41,22 @@
       </df-messenger-chat-bubble>
     </df-messenger>
 
-    <!-- SCRIPT PARA INTERCEPTAR Y LIMPIAR LA BASURA DE VERTEX AI (BUG 02) -->
+    <!-- SCRIPT CORREGIDO PARA DIALOGFLOW CX (BUG 02) -->
     <script>
-      // ── 1. Intercepción de eventos: conservar sólo texto puro ──
       window.addEventListener('df-response-received', (event) => {
-        const messages = event.detail && event.detail.messages;
-        if (!messages) return;
+        if (event.detail && event.detail.messages) {
+          
+          // 1. Filtrar: Dejamos SOLO los mensajes que traigan texto puro (Formato CX)
+          // Esto elimina automáticamente cualquier "tarjeta" o hipervínculo de Vertex AI
+          event.detail.messages = event.detail.messages.filter(msg => msg.text !== undefined);
 
-        // Descartar rich cards, info cards, chips de citas; conservar sólo texto
-        event.detail.messages = messages.filter(msg => msg.type === 'text');
-
-        // Eliminar marcadores de cita inline: [1], [2], etc.
-        event.detail.messages.forEach(msg => {
-          if (msg.text) msg.text = msg.text.replace(/\[\d+\]/g, '').trim();
-        });
-      });
-
-      // ── 2. Inyección de CSS en Shadow DOM para ocultar residuos visuales ──
-      // df-messenger anida varios shadow roots; recorremos todos recursivamente.
-      const _injected = new WeakSet();
-
-      function _injectHideCSS(shadowRoot) {
-        if (!shadowRoot || _injected.has(shadowRoot)) return;
-        _injected.add(shadowRoot);
-
-        const style = document.createElement('style');
-        style.textContent = `
-          df-info-card,
-          [class*="grounding"],
-          [class*="citation"],
-          [class*="source-card"],
-          [class*="snippet-card"],
-          [class*="search-chip"] {
-            display: none !important;
-          }
-        `;
-        shadowRoot.appendChild(style);
-
-        // Observar nuevos nodos que puedan aparecer más tarde (carga diferida)
-        new MutationObserver(muts => {
-          muts.forEach(m => m.addedNodes.forEach(n => _walkShadow(n)));
-        }).observe(shadowRoot, { childList: true, subtree: true });
-      }
-
-      function _walkShadow(node) {
-        if (!node || node.nodeType !== 1) return;
-        if (node.shadowRoot) {
-          _injectHideCSS(node.shadowRoot);
-          node.shadowRoot.querySelectorAll('*').forEach(_walkShadow);
+          // 2. Limpieza quirúrgica: Borrar los numeritos como [1], [2] del texto
+          event.detail.messages.forEach(msg => {
+            if (msg.text && Array.isArray(msg.text.text)) {
+              msg.text.text = msg.text.text.map(texto => texto.replace(/\[\d+\]/g, '').trim());
+            }
+          });
         }
-      }
-
-      customElements.whenDefined('df-messenger').then(() => {
-        _walkShadow(document.querySelector('df-messenger'));
-        // Re-recorrer cuando el panel del chat se abra por primera vez
-        window.addEventListener('df-messenger-loaded', () => {
-          _walkShadow(document.querySelector('df-messenger'));
-        });
       });
     </script>
 
