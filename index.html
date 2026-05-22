@@ -41,32 +41,38 @@
       </df-messenger-chat-bubble>
     </df-messenger>
 
-    <!-- SCRIPT FIX BUG 02: DESTRUCCION DE df-card EN SHADOW DOM -->
-    <!-- SCRIPT FIX BUG 02: DESTRUCCION DE DATOS PAYLOAD -->
+    <!-- SCRIPT FIX BUG 02: RADAR TERMINATOR (BARRIDO CONSTANTE) -->
     <script>
-      window.addEventListener('df-response-received', (event) => {
-        if (!event.detail || !event.detail.messages) return;
+      // Este script funciona como un radar que escanea el chat cada medio segundo 
+      // y oculta cualquier tarjeta (df-card) de los hipervínculos, sin importar dónde se esconda.
+      setInterval(() => {
+        function aniquilarTarjetas(nodo) {
+          if (!nodo) return;
 
-        // 1. CÁMARA DE SEGURIDAD: Imprimir en consola lo que manda Google antes de limpiarlo
-        console.log("Paquete interceptado:", JSON.parse(JSON.stringify(event.detail.messages)));
-
-        // 2. FILTRO ULTRA AGRESIVO: Destruir cualquier tarjeta (payload) y dejar SOLO el texto
-        event.detail.messages = event.detail.messages.filter(msg => {
-          // Si el mensaje trae un 'payload' o 'richContent' (que es donde Google esconde los df-card), lo eliminamos
-          if (msg.payload || msg.richContent) {
-            return false;
+          // 1. Si encontramos al intruso (df-card), lo volvemos invisible
+          if (nodo.tagName && nodo.tagName.toLowerCase() === 'df-card') {
+            nodo.style.setProperty('display', 'none', 'important');
           }
-          // Si es un mensaje de texto puro, lo dejamos pasar
-          return msg.text !== undefined;
-        });
 
-        // 3. LIMPIEZA DE NÚMEROS: Quitar los [1], [2] del texto que sí dejamos pasar
-        event.detail.messages.forEach(msg => {
-          if (msg.text && Array.isArray(msg.text.text)) {
-            msg.text.text = msg.text.text.map(t => t.replace(/\[\d+\]/g, '').trim());
+          // 2. Si el nodo tiene un escudo de Google (Shadow Root), lo atravesamos
+          if (nodo.shadowRoot) {
+            aniquilarTarjetas(nodo.shadowRoot);
           }
-        });
-      });
+
+          // 3. Revisamos a todos los hijos de este nodo recursivamente
+          if (nodo.children) {
+            for (let i = 0; i < nodo.children.length; i++) {
+              aniquilarTarjetas(nodo.children[i]);
+            }
+          }
+        }
+
+        // Encendemos el radar apuntando al componente principal del chat
+        const chatPrincipal = document.querySelector('df-messenger');
+        if (chatPrincipal) {
+          aniquilarTarjetas(chatPrincipal);
+        }
+      }, 500); // 500 milisegundos = medio segundo
     </script>
 
 </body>
