@@ -41,5 +41,24 @@
       </df-messenger-chat-bubble>
     </df-messenger>
 
+    <!-- SCRIPT PARA INTERCEPTAR Y LIMPIAR LA BASURA DE VERTEX AI (BUG 02) -->
+    <script>
+      window.addEventListener('df-response-received', (event) => {
+        if (event.detail && event.detail.messages) {
+          
+          // 1. Filtrar los mensajes para conservar SOLO el texto puro, descartando las "Tarjetas" de Grounding
+          event.detail.messages = event.detail.messages.filter(msg => msg.type === 'text');
+
+          // 2. Limpiar los indicadores de citas (ej: [1], [2]) del texto del bot
+          event.detail.messages.forEach(msg => {
+            if (msg.type === 'text' && msg.text) {
+              // Expresión regular que busca corchetes con números y los elimina
+              msg.text = msg.text.replace(/\[\d+\]/g, ''); 
+            }
+          });
+        }
+      });
+    </script>
+
 </body>
 </html>
